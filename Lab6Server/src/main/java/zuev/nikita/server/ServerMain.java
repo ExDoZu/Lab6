@@ -1,33 +1,39 @@
 package zuev.nikita.server;
 
 import zuev.nikita.server.command.Save;
-import zuev.nikita.message.ServerResponse;
-import zuev.nikita.server.socket.Connector;
-import zuev.nikita.server.socket.SocketChannelIO;
-import zuev.nikita.structure.Organization;
 
-import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Hashtable;
-import java.util.NoSuchElementException;
-import java.util.Scanner;
+import java.util.*;
 
 public class ServerMain {
     public static void main(String[] args) {
-        Connector connector = null;
         Scanner scanner = new Scanner(System.in);
         int port = 52300;
-
         try {
             port = Integer.parseInt(args[0]);
         } catch (Exception ignored) {
         }
 
+        Selector selector;
+        try {
+            selector = Selector.open();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        ServerSocketChannel serverSocketChannel = null;
         boolean stop = false;
-        while (true) {
+        while (!stop) {
             try {
-                connector = new Connector(port);
+                serverSocketChannel = ServerSocketChannel.open();
+                serverSocketChannel.configureBlocking(false);
+                serverSocketChannel.bind(new InetSocketAddress(port));
+                serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
                 break;
             } catch (IOException e) {
                 System.out.println("Port " + port + " is not available.\n" +
@@ -45,102 +51,81 @@ public class ServerMain {
                 }
             }
         }
+        if (stop) return;
         System.out.println("Server started.");
-        SocketChannel socketChannel;
-        while (!stop) { // The Great Server While
-            socketChannel = null;
-            while (socketChannel == null) { // The Little Server While
-                try {
-                    socketChannel = connector.accept();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            System.out.println("Client connected.");
-            SocketChannelIO socketChannelIO = null;
+        HashMap<SocketChannel, Connection> connections = new HashMap<>();
+        boolean serverIsOn = true;
+        while (serverIsOn) {
             try {
-                socketChannelIO = new SocketChannelIO(socketChannel);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            boolean flag = true;
-            String path = null, response;
-            Hashtable<String, Organization> collection = null;
+                selector.select(10);
 
-            try {
-                path = socketChannelIO.read().getPath();
-                while (flag) {
-                    File file = new File(path);
-                    if (path.equals("exit")) break;
-                    else if (file.isDirectory()) {
-                        socketChannelIO.write("Укажите имя файла, а не директории.", ServerResponse.WRONG_FILE_PATH);
-                        path = socketChannelIO.read().getPath();
-                    } else if (file.exists()) {
-                        if (!(file.canRead() && file.canWrite())) {
-                            socketChannelIO.write(null, ServerResponse.NO_ACCESS_TO_FILE);
-                            path = socketChannelIO.read().getPath();
-                        } else {
+                if (System.in.available() > 0) {
+                    String input = scanner.nextLine().trim();
+                    if (input.equals("exit") || input.equals("save")) {
+                        for (SocketChannel key : connections.keySet()) {
                             try {
-                                collection = JsonDataHandler.parseFile(path);
-                                socketChannelIO.write(null, ServerResponse.OK);
-                                flag = false;
-                            } catch (WrongDataException e) {
-                                socketChannelIO.write(e.getMessage(), ServerResponse.WRONG_DATA);
-                            } catch (Exception e) {
-                                socketChannelIO.write(null, ServerResponse.WRONG_FILE_STRUCTURE);
-                            }
-                            if (flag) {
-                                response = socketChannelIO.read().getPath();
-                                if (response.equalsIgnoreCase("exit") || response.equalsIgnoreCase("no") || response.equalsIgnoreCase("0")) {
-                                    flag = false;
-                                } else if (response.equalsIgnoreCase("yes") || response.equalsIgnoreCase("1")) {
-                                    collection = new Hashtable<>();
-                                    socketChannelIO.write(null, ServerResponse.OK);
-                                    flag = false;
+                                new Save(connections.get(key).getCollection()).execute(null, connections.get(key).getFilePath(), null);
+                            } catch (FileNotFoundException e) {
+                                if (e.getMessage().equals("Нет доступа к файлу из-за нехватки прав доступа.")) {
+                                    System.out.println("Access denied.");
                                 } else {
-                                    path = response;
+                                    System.out.println("One of files is not found to save a collection.");
                                 }
                             }
                         }
+                        if (input.equals("exit")) serverIsOn = false;
                     } else {
-                        socketChannelIO.write("Файл не обнаружен.", ServerResponse.WRONG_FILE_PATH);
-                        path = socketChannelIO.read().getPath();
+                        System.out.println("Unknown command '" + input +
+                                "'\nAvailable commands:\n" +
+                                "-- exit\n-- save");
                     }
                 }
-            } catch (ClassNotFoundException | IOException rwException) {
-                System.out.println("Read/Write error. Trying to get message.");
-            }
-
-            ProgramLauncher programLauncher = new ProgramLauncher(socketChannelIO);
-            try {
-                programLauncher.launch(collection, path);
-                Save save = new Save(collection);
-                save.execute(null, path, null);
-            } catch (IOException | ClassNotFoundException ignored) {
-                Save save = new Save(collection);
-                try {
-                    save.execute(null, path, null);
-                } catch (IOException ignored1) {
-                }
-            }
-            try {
-                socketChannelIO.close();
-                socketChannel.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
+            } catch (NoSuchElementException e) {
+                serverIsOn = false;
             }
-            System.out.println("Client disconnected.\n" +
-                    "Input 'exit' to stop or anything to continue.");
-            if (scanner.nextLine().trim().equals("exit")) {
-                stop = true;
+            Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
+            while (keys.hasNext()) {
+                SelectionKey key = keys.next();
+                keys.remove();
+                if (!key.isValid()) continue;
+                if (key.isAcceptable()) {
+                    ServerSocketChannel servSockChannel = (ServerSocketChannel) key.channel();
+                    try {
+                        SocketChannel socketChannel = servSockChannel.accept();
+                        socketChannel.configureBlocking(false);
+                        connections.put(socketChannel, new Connection(socketChannel));
+                        socketChannel.register(selector, SelectionKey.OP_WRITE);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                } else if (key.isWritable()) {
+                    SocketChannel socketChannel = (SocketChannel) key.channel();
+                    try {
+                        boolean flag = connections.get(socketChannel).clientHandle();
+                        if (!flag) {
+                            throw new IOException();
+                        }
+                    } catch (IOException e) {
+                        connections.remove(socketChannel);
+                        try {
+                            socketChannel.close();
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                        key.cancel();
+                    } catch (ClassNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
             }
         }
         try {
-            connector.close();
+            serverSocketChannel.close();
+            selector.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-
     }
 }
