@@ -3,7 +3,7 @@ package zuev.nikita.client;
 import zuev.nikita.client.command.Command;
 import zuev.nikita.client.command.Exit;
 import zuev.nikita.client.command.History;
-import zuev.nikita.client.socket.SocketIO;
+import zuev.nikita.client.net.SocketIO;
 import zuev.nikita.message.ServerResponse;
 
 import java.io.File;

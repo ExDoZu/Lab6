@@ -1,4 +1,4 @@
-package zuev.nikita.client.socket;
+package zuev.nikita.client.net;
 
 import java.io.IOException;
 import java.net.Socket;

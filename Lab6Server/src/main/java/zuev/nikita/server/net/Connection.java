@@ -1,9 +1,11 @@
-package zuev.nikita.server;
+package zuev.nikita.server.net;
 
+import zuev.nikita.server.Invoker;
+import zuev.nikita.server.JsonDataHandler;
+import zuev.nikita.server.WrongDataException;
 import zuev.nikita.server.command.*;
 import zuev.nikita.message.ClientRequest;
 import zuev.nikita.message.ServerResponse;
-import zuev.nikita.server.socket.SocketChannelIO;
 import zuev.nikita.structure.Organization;
 
 import java.io.File;
@@ -17,8 +19,8 @@ import java.util.Hashtable;
  */
 public class Connection {
     private final SocketChannelIO socketChannelIO;
-    private String filePath;
-    private Hashtable<String, Organization> collection;
+    private String filePath=null;
+    private Hashtable<String, Organization> collection=null;
     private final Invoker invoker;
 
     public Connection(SocketChannel socketChannel) {
@@ -28,8 +30,6 @@ public class Connection {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        filePath = null;
-        collection = null;
         initPathAndCollection();
         try {
             socketChannelIO.unblock();
@@ -37,7 +37,7 @@ public class Connection {
             throw new RuntimeException(e);
         }
         invoker = new Invoker();
-        initInvoker();
+        registerInvokerCommands();
     }
 
     private void initPathAndCollection() {
@@ -46,7 +46,6 @@ public class Connection {
         try {
             filePath = socketChannelIO.read().getPath();
             while (flag) {
-
                 File file = new File(filePath);
                 if (filePath.equals("exit")) break;
                 else if (file.isDirectory()) {
@@ -90,7 +89,7 @@ public class Connection {
         }
     }
 
-    private void initInvoker() {
+    private void registerInvokerCommands() {
         invoker.register("info", new Info(collection));
         invoker.register("clear", new Clear(collection));
         invoker.register("filter_greater_than_postal_address", new FilterGreaterThanPostalAddress(collection));
@@ -126,7 +125,6 @@ public class Connection {
             new Save(collection).execute(null, filePath, null);
             return false;
         }
-
         try {
             invokerResponse = invoker.invoke(fullCommand, filePath, organization);
             if (invokerResponse.equals(String.valueOf(ServerResponse.WRONG_COMMAND)))

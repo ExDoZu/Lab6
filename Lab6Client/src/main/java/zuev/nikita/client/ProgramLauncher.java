@@ -1,7 +1,7 @@
 package zuev.nikita.client;
 
 import zuev.nikita.message.ServerResponse;
-import zuev.nikita.client.socket.SocketIO;
+import zuev.nikita.client.net.SocketIO;
 import zuev.nikita.client.command.*;
 import java.io.IOException;
 import java.util.Scanner;

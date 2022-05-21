@@ -1,4 +1,4 @@
 /**
  * Classes responsible for connection
  */
-package zuev.nikita.server.socket;
+package zuev.nikita.client.net;

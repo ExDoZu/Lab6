@@ -1,7 +1,7 @@
 package zuev.nikita.client.command;
 
 import zuev.nikita.message.ServerResponse;
-import zuev.nikita.client.socket.SocketIO;
+import zuev.nikita.client.net.SocketIO;
 import zuev.nikita.structure.Organization;
 
 import java.io.File;

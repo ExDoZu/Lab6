@@ -1,7 +1,7 @@
 package zuev.nikita.client.command;
 
 
-import zuev.nikita.client.socket.SocketIO;
+import zuev.nikita.client.net.SocketIO;
 
 import java.io.File;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package zuev.nikita.server.socket;
+package zuev.nikita.server.net;
 
 import zuev.nikita.message.ClientRequest;
 import zuev.nikita.message.ServerResponse;
