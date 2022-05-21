@@ -2,8 +2,8 @@ package zuev.nikita.client;
 
 
 import zuev.nikita.message.ServerResponse;
-import zuev.nikita.client.socket.Connection;
-import zuev.nikita.client.socket.SocketIO;
+import zuev.nikita.client.net.Connection;
+import zuev.nikita.client.net.SocketIO;
 
 import java.io.IOException;
 import java.util.NoSuchElementException;
@@ -11,18 +11,19 @@ import java.util.Scanner;
 
 
 public class ClientMain {
-    public static void main(String[] args) {
 
-        Scanner inputScanner = new Scanner(System.in);
-        Connection connection = null;
-        SocketIO socketIO = null;
+    private static int tryToGetPort(String[] args) {
         int port = 52300;
         try {
             port = Integer.parseInt(args[1]);
         } catch (Exception ignored) {
         }
-        String host = "helios.se.ifmo.ru";
+        return port;
+    }
+
+    private static boolean tryToConnect(Connection connection, SocketIO socketIO, String host, int port) {
         boolean flag = true;
+        Scanner inputScanner = new Scanner(System.in);
         while (flag) {
             try {
                 connection = new Connection(host, port);
@@ -49,50 +50,27 @@ public class ClientMain {
                 }
             }
         }
-        System.out.println("Соединение установлено.");
+        return flag;
+    }
+
+    public static void main(String[] args) {
+
+        Scanner inputScanner = new Scanner(System.in);
+        Connection connection = null;
+        SocketIO socketIO = null;
+        int port = tryToGetPort(args);
+        String host = "helios.se.ifmo.ru";
+        boolean flag = tryToConnect(connection, socketIO, host, port);
+        if (flag) {
+            port = connection.getSocket().getPort();
+            System.out.println("Соединение установлено.");
+        }
         while (flag) {
             try {
                 //Sends the path to save a file with collection on the server.
                 socketIO.write(null, null, args[0]);
                 ServerResponse serverResponse = socketIO.read();
-
-                if (serverResponse.getStatusCode() != ServerResponse.OK) {
-                    switch (serverResponse.getStatusCode()) {
-                        case ServerResponse.WRONG_FILE_STRUCTURE:
-                            System.out.println("Структура файла некорректна или файл поврежден.\n" +
-                                    "Введите путь к другому файлу.\n" +
-                                    "Продолжить с данным файлом без данных из него (Предыдущие данные будут потеряны)? yes/no. (no = exit)");
-                            break;
-                        case ServerResponse.WRONG_DATA:
-                            System.out.println("В файле содержатся некорректные данные. " + serverResponse.getResponse() +
-                                    "\nВведите путь к другому файлу.\n" +
-                                    "Продолжить с данным файлом без данных из него (Предыдущие будут потеряны)? yes/no. (no = exit)");
-                            break;
-                        case ServerResponse.WRONG_FILE_PATH:
-                            System.out.println(serverResponse.getResponse() +
-                                    "\nВведите путь к другому файлу.");
-                            break;
-                        case ServerResponse.NO_ACCESS_TO_FILE:
-                            System.out.println("Нехватка прав доступа. Укажите новое имя файла.");
-                            break;
-                    }
-                    String response = inputScanner.nextLine().trim();
-                    if (response.equalsIgnoreCase("exit") || response.equalsIgnoreCase("no") || response.equalsIgnoreCase("0")) {
-                        flag = false;
-                        args[0] = "exit";
-                        socketIO.write(null, null, args[0]);
-                    } else if ((response.equalsIgnoreCase("yes") || response.equalsIgnoreCase("1"))
-                            && serverResponse.getStatusCode() != ServerResponse.WRONG_FILE_PATH && serverResponse.getStatusCode() != ServerResponse.NO_ACCESS_TO_FILE) {
-                        args[0] = "yes";
-                    } else {
-                        args[0] = response;
-                    }
-                } else {
-                    ProgramLauncher programLauncher = new ProgramLauncher();
-                    programLauncher.launch(args[0], socketIO);
-
-                    flag = false;
-                }
+                handleResponseOnPath(serverResponse, socketIO, args);
             } catch (IndexOutOfBoundsException e) {
                 System.out.println("Не указан путь к файлу.\n" +
                         "Укажите путь к файлу или введите exit для выхода из программы.");
@@ -107,42 +85,61 @@ public class ClientMain {
                 if (inputScanner.nextLine().trim().equals("exit")) {
                     break;
                 } else {
-                    while (flag) {
-                        try {
-                            connection = new Connection(host, port);
-                            socketIO = new SocketIO(connection);
-                            break;
-                        } catch (IOException ec) {
-                            System.out.println("Сервер выключен или порт " + port + " недоступен.\n" +
-                                    "Укажите порт сервера.");
-                            while (true) {
-                                try {
-                                    String inp = inputScanner.nextLine().trim();
-                                    if (inp.equals("exit")) {
-                                        flag = false;
-                                        break;
-                                    }
-                                    port = Integer.parseInt(inp);
-                                    break;
-                                } catch (NumberFormatException numberFormatException) {
-                                    System.out.println("Укажите корректный порт.");
-                                } catch (NoSuchElementException noSuchElementException) {
-                                    flag = false;
-                                    break;
-                                }
-                            }
-                        }
+                    flag = tryToConnect(connection, socketIO, host, port);
+                    if (flag) {
+                        port = connection.getSocket().getPort();
+                        System.out.println("Соединение восстановлено.");
                     }
-
                 }
-
             }
         }
-        if (socketIO != null)
+        if (connection != null)
             try {
                 connection.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+    }
+
+    private static boolean handleResponseOnPath(ServerResponse serverResponse, SocketIO socketIO, String[] args) throws IOException, ClassNotFoundException {
+        Scanner inputScanner = new Scanner(System.in);
+        boolean flag = true;
+        if (serverResponse.getStatusCode() != ServerResponse.OK) {
+            switch (serverResponse.getStatusCode()) {
+                case ServerResponse.WRONG_FILE_STRUCTURE:
+                    System.out.println("Структура файла некорректна или файл поврежден.\n" +
+                            "Введите путь к другому файлу.\n" +
+                            "Продолжить с данным файлом без данных из него (Предыдущие данные будут потеряны)? yes/no. (no = exit)");
+                    break;
+                case ServerResponse.WRONG_DATA:
+                    System.out.println("В файле содержатся некорректные данные. " + serverResponse.getResponse() +
+                            "\nВведите путь к другому файлу.\n" +
+                            "Продолжить с данным файлом без данных из него (Предыдущие будут потеряны)? yes/no. (no = exit)");
+                    break;
+                case ServerResponse.WRONG_FILE_PATH:
+                    System.out.println(serverResponse.getResponse() +
+                            "\nВведите путь к другому файлу.");
+                    break;
+                case ServerResponse.NO_ACCESS_TO_FILE:
+                    System.out.println("Нехватка прав доступа. Укажите новое имя файла.");
+                    break;
+            }
+            String response = inputScanner.nextLine().trim();
+            if (response.equalsIgnoreCase("exit") || response.equalsIgnoreCase("no") || response.equalsIgnoreCase("0")) {
+                flag = false;
+                args[0] = "exit";
+                socketIO.write(null, null, args[0]);
+            } else if ((response.equalsIgnoreCase("yes") || response.equalsIgnoreCase("1"))
+                    && serverResponse.getStatusCode() != ServerResponse.WRONG_FILE_PATH && serverResponse.getStatusCode() != ServerResponse.NO_ACCESS_TO_FILE) {
+                args[0] = "yes";
+            } else {
+                args[0] = response;
+            }
+        } else {
+            ProgramLauncher programLauncher = new ProgramLauncher();
+            programLauncher.launch(args[0], socketIO);
+            flag = false;
+        }
+        return flag;
     }
 }
