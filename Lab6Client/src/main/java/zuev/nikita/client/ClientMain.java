@@ -140,7 +140,6 @@ public class ClientMain {
         }
         if (socketIO != null)
             try {
-                socketIO.close();
                 connection.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
