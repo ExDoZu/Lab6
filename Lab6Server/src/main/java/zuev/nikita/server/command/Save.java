@@ -1,5 +1,7 @@
 package zuev.nikita.server.command;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import zuev.nikita.server.JsonDataHandler;
 import zuev.nikita.structure.Organization;
 
@@ -13,24 +15,34 @@ import java.util.Hashtable;
  * Saves the collection to the file.
  */
 public class Save extends Command {
+    private final static Logger log = LoggerFactory.getLogger(Save.class);
+
     public Save(Hashtable<String, Organization> collection) {
         super(collection);
     }
 
     @Override
-    public String execute(String arg, String savePath, Organization organization) throws FileNotFoundException {
+    public String execute(String arg, String savePath, Organization organization) {
         if (arg != null) return "Команда не нуждается в аргументе.";
         File file = new File(savePath);
         try {
-            if (!file.exists()) throw new FileNotFoundException();
-            if (!file.canWrite()) throw new FileNotFoundException("Нет доступа к файлу из-за нехватки прав доступа.");
+            if (!file.exists()) {
+                log.error("Collection is not saved. File '" + savePath + "'is not found");
+                return "nofile";
+            }
+            if (!file.canWrite()) {
+                log.error("Collection is not saved. No access to file '" + savePath + "'");
+                return "noaccess";
+            }
             FileWriter fileWriter = new FileWriter(file);
             fileWriter.write(JsonDataHandler.hashtableToString(collection));
             fileWriter.close();
+            log.info("Collection is successfully saved");
         } catch (IOException e) {
-            throw new FileNotFoundException();
+            log.error("Collection is not saved. File '" + savePath + "'is not found or no access to it");
+            return "fail";
         }
-        return "Данные сохранены.";
+        return "ok";
     }
 
     @Override

@@ -1,7 +1,10 @@
 package zuev.nikita.server.net;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import zuev.nikita.server.Invoker;
 import zuev.nikita.server.JsonDataHandler;
+import zuev.nikita.server.ServerMain;
 import zuev.nikita.server.WrongDataException;
 import zuev.nikita.server.command.*;
 import zuev.nikita.message.ClientRequest;
@@ -12,15 +15,17 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 import java.util.Hashtable;
 
 /**
  * Client connection class
  */
 public class Connection {
+    private final static Logger log = LoggerFactory.getLogger(Connection.class);
     private final SocketChannelIO socketChannelIO;
-    private String filePath=null;
-    private Hashtable<String, Organization> collection=null;
+    private String filePath = null;
+    private Hashtable<String, Organization> collection = null;
     private final Invoker invoker;
 
     public Connection(SocketChannel socketChannel) {
@@ -106,9 +111,8 @@ public class Connection {
 
     /**
      * Handles commands by a client using the invoker
+     *
      * @return true - continue handling this connection
-     * @throws IOException
-     * @throws ClassNotFoundException
      */
     public boolean clientHandle() throws IOException, ClassNotFoundException {
         if (collection == null) return false;
@@ -116,9 +120,12 @@ public class Connection {
 
         ClientRequest clientRequest = socketChannelIO.read();
         if (clientRequest == null) return true;
+        log.info("Got new request: " + Arrays.toString(clientRequest.getFullCommand()));
         String[] fullCommand = clientRequest.getFullCommand();
-        if (clientRequest.getPath() != null)
+        if (clientRequest.getPath() != null) {
             filePath = clientRequest.getPath();
+            log.info("Client set a new file path: " + filePath);
+        }
         Organization organization = clientRequest.getOrganization();
 
         if (fullCommand[0].equals("exit")) {
@@ -127,18 +134,16 @@ public class Connection {
         }
         try {
             invokerResponse = invoker.invoke(fullCommand, filePath, organization);
-            if (invokerResponse.equals(String.valueOf(ServerResponse.WRONG_COMMAND)))
+            if (invokerResponse.equals(String.valueOf(ServerResponse.WRONG_COMMAND))) {
                 socketChannelIO.write(null, ServerResponse.WRONG_COMMAND);
-            else
-                socketChannelIO.write(invokerResponse, ServerResponse.OK);
-        } catch (FileNotFoundException e) {
-            if (e.getMessage().equals("Нет доступа к файлу из-за нехватки прав доступа.")) {
-                socketChannelIO.write(null, ServerResponse.NO_ACCESS_TO_FILE);
+                log.info("Command was wrong");
             } else {
-                socketChannelIO.write(null, ServerResponse.WRONG_FILE_PATH);
+                socketChannelIO.write(invokerResponse, ServerResponse.OK);
+                log.info("Command '"+fullCommand[0]+"' was successfully executed");
             }
-        } catch (IOException e) {
-            socketChannelIO.write(null, ServerResponse.NO_ACCESS_TO_FILE);
+        } catch (Exception e) {
+            new Save(collection).execute(null, filePath, null);
+            return false;
         }
         return true;
     }

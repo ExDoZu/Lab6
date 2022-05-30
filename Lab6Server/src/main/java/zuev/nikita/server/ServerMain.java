@@ -1,5 +1,7 @@
 package zuev.nikita.server;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import zuev.nikita.server.command.Save;
 import zuev.nikita.server.net.Connection;
 
@@ -13,6 +15,7 @@ import java.nio.channels.SocketChannel;
 import java.util.*;
 
 public class ServerMain {
+    private final static Logger log = LoggerFactory.getLogger(ServerMain.class);
 
     private static int tryToGetPort(String[] args) {
         int port = 52300;
@@ -62,11 +65,13 @@ public class ServerMain {
     }
 
     public static void main(String[] args) {
+        log.info("Application started");
         int port = tryToGetPort(args);
+        log.info("Port is set as " + port);
         Selector selector = tryToOpenSelector();
         ServerSocketChannel serverSocketChannel = tryToGetServerSocketChannel(selector, port);
         if (serverSocketChannel == null) return;
-        System.out.println("Server started.");
+        log.info("Server started");
         HashMap<SocketChannel, Connection> connections = new HashMap<>();
         boolean serverIsOn = true;
         while (serverIsOn) {
@@ -91,8 +96,11 @@ public class ServerMain {
         try {
             serverSocketChannel.close();
             selector.close();
+            log.info("Server stopped");
         } catch (IOException e) {
+            log.error("Unexpected error " + e);
             throw new RuntimeException(e);
+
         }
     }
 
@@ -100,10 +108,19 @@ public class ServerMain {
         ServerSocketChannel servSockChannel = (ServerSocketChannel) key.channel();
         try {
             SocketChannel socketChannel = servSockChannel.accept();
+            log.info("New connection is accepted");
             socketChannel.configureBlocking(false);
-            connections.put(socketChannel, new Connection(socketChannel));
-            socketChannel.register(selector, SelectionKey.OP_WRITE);
+            try {
+                connections.put(socketChannel, new Connection(socketChannel));
+                socketChannel.register(selector, SelectionKey.OP_WRITE);
+                log.info("New connection is established.");
+            } catch (NullPointerException nullPointerException) {
+                socketChannel.close();
+                key.cancel();
+                log.info("New connection is canceled");
+            }
         } catch (IOException e) {
+            log.error("Unexpected error " + e);
             throw new RuntimeException(e);
         }
     }
@@ -120,10 +137,13 @@ public class ServerMain {
             try {
                 socketChannel.close();
             } catch (IOException ex) {
+                log.error("Unexpected error " + ex);
                 throw new RuntimeException(ex);
             }
             key.cancel();
+            log.info("Connection is down");
         } catch (ClassNotFoundException e) {
+            log.error("Invalid data transmitted over the network");
             throw new RuntimeException(e);
         }
     }
@@ -135,16 +155,26 @@ public class ServerMain {
             if (System.in.available() > 0) {
                 String input = scanner.nextLine().trim();
                 if (input.equals("exit") || input.equals("save")) {
+                    boolean allSaved = true;
                     for (SocketChannel key : connections.keySet()) {
-                        try {
-                            new Save(connections.get(key).getCollection()).execute(null, connections.get(key).getFilePath(), null);
-                        } catch (FileNotFoundException e) {
-                            if (e.getMessage().equals("Нет доступа к файлу из-за нехватки прав доступа.")) {
-                                System.out.println("Access denied.");
-                            } else {
+                        String response = new Save(connections.get(key).getCollection()).execute(null, connections.get(key).getFilePath(), null);
+                        switch (response) {
+                            case "nofile":
+                                allSaved = false;
                                 System.out.println("One of files is not found to save a collection.");
-                            }
+                                break;
+                            case "noaccess":
+                                allSaved = false;
+                                System.out.println("One of files is not accessible to save a collection.");
+                                break;
+                            case "fail":
+                                allSaved = false;
+                                System.out.println("One of files is not saved.");
+                                break;
                         }
+                    }
+                    if (allSaved) {
+                        System.out.println("All collections are successfully saved.");
                     }
                     if (input.equals("exit")) serverIsOn = false;
                 } else {

@@ -1,5 +1,7 @@
 package zuev.nikita.server.net;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import zuev.nikita.message.ClientRequest;
 import zuev.nikita.message.ServerResponse;
 
@@ -8,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
 public class SocketChannelIO {
+    private final static Logger log = LoggerFactory.getLogger(SocketChannelIO.class);
     private final SocketChannel socketChannnel;
 
 
@@ -27,6 +30,7 @@ public class SocketChannelIO {
             ClientRequest clientRequest = (ClientRequest) objectInputStream.readObject();
             objectInputStream.close();
             bis.close();
+            log.info("Data is successfully got");
             return clientRequest;
         }
     }
@@ -41,7 +45,7 @@ public class SocketChannelIO {
         ByteBuffer byteBuffer = ByteBuffer.wrap(bos.toByteArray());
         socketChannnel.write(byteBuffer);
         objectOutputStream.flush();
-
+        log.info("Data is successfully sent");
         objectOutputStream.close();
     }
 
