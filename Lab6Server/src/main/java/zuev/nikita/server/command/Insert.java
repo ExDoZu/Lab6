@@ -17,7 +17,7 @@ public class Insert extends Command {
     }
 
     @Override
-    public String execute(String arg, String savePath, Organization organization) throws IOException {
+    public String execute(String arg, String savePath, Organization organization) {
         if (collection.containsKey(arg)) {
             return "Уже есть элемент с таким ключом.";
         } else {

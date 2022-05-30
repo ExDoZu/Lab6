@@ -14,7 +14,7 @@ public class RemoveKey extends Command {
     }
 
     @Override
-    public String execute(String arg, String savePath, Organization organization) throws IOException {
+    public String execute(String arg, String savePath, Organization organization){
         if (arg == null) return "Не был указан Ключ.";
         if (collection.containsKey(arg)) {
             collection.remove(arg);

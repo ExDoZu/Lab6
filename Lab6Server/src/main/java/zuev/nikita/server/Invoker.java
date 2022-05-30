@@ -35,7 +35,7 @@ public class Invoker {
     /**
      * @param fullCommand command with/without argument
      */
-    public String invoke(String[] fullCommand, String path, Organization organization) throws IOException {
+    public String invoke(String[] fullCommand, String path, Organization organization){
         if (registeredCommands.containsKey(fullCommand[0])) {
             if (fullCommand.length == 1)
                 return registeredCommands.get(fullCommand[0]).execute(null, path, organization);

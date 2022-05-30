@@ -34,9 +34,8 @@ public abstract class Command {
     /**
      * @param arg Command argument
      * @return result/report of command execution
-     * @throws IOException Throws when there is problem with file reading or writing.
      */
-    public abstract String execute(String arg, String savePath, Organization organization) throws IOException;
+    public abstract String execute(String arg, String savePath, Organization organization);
 
     /**
      * @return Information about the command.

@@ -19,7 +19,7 @@ public class RemoveGreaterKey extends Command {
      * @param arg Given key
      */
     @Override
-    public String execute(String arg, String savePath, Organization organization) throws IOException {
+    public String execute(String arg, String savePath, Organization organization) {
         if (arg == null) return "Не был указан Ключ.";
 
         Hashtable<String, Organization> newCollection = new Hashtable<>(collection.entrySet().stream().filter(x -> x.getKey().compareTo(arg) <= 0).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));

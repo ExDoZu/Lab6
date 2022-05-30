@@ -16,7 +16,7 @@ public class Clear extends Command {
     }
 
     @Override
-    public String execute(String arg, String savePath, Organization organization) throws IOException {
+    public String execute(String arg, String savePath, Organization organization) {
         if (arg != null) return "Команда не нуждается в аргументе.";
         if (!collection.isEmpty()) {
             collection.clear();

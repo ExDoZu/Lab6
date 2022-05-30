@@ -15,7 +15,7 @@ public class Update extends Command {
     }
 
     @Override
-    public String execute(String arg, String savePath, Organization organization) throws IOException {
+    public String execute(String arg, String savePath, Organization organization) {
         int id = Integer.parseInt(arg);
         boolean foundID = false;
         for (String key : collection.keySet())

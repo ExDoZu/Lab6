@@ -19,7 +19,7 @@ public class FilterGreaterThanPostalAddress extends Command {
      * @param arg Given address.
      */
     @Override
-    public String execute(String arg, String savePath, Organization organization) throws IOException {
+    public String execute(String arg, String savePath, Organization organization){
         if (arg == null) return "Команда нуждается в аргументе.";
         Address userInputPostalAddress = new Address(arg);
         String str = collection.values().stream().filter(v -> v.getPostalAddress().compareTo(userInputPostalAddress) > 0).map(Organization::toString).collect(Collectors.joining("\n\n"));

@@ -16,7 +16,7 @@ public class PrintFieldAscendingPostalAddress extends Command {
     }
 
     @Override
-    public String execute(String arg,String savePath, Organization organization) throws IOException {
+    public String execute(String arg,String savePath, Organization organization) {
         if(arg!=null)return "Команда не нуждается в аргументе.";
         return collection.values().stream().map(Organization::getPostalAddress).sorted().map(Address::getZipCode).collect(Collectors.joining("\n"));
     }

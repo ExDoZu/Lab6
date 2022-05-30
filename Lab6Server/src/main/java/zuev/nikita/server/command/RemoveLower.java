@@ -16,7 +16,7 @@ public class RemoveLower extends Command {
     }
 
     @Override
-    public String execute(String arg, String savePath, Organization organization) throws IOException {
+    public String execute(String arg, String savePath, Organization organization){
         Hashtable<String, Organization> newCollection = new Hashtable<>(collection.entrySet().stream().filter(x -> x.getValue().compareTo(organization) >= 0).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
         if (newCollection.size() == collection.size()) {
             return "Нет элементов с ключом больше заданного.";
