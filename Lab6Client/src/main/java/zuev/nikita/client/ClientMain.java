@@ -21,14 +21,11 @@ public class ClientMain {
         return port;
     }
 
-    private static boolean tryToConnect(Connection connection, SocketIO socketIO, String host, int port) {
-        boolean flag = true;
+    private static Connection tryToConnect(String host, int port) {
         Scanner inputScanner = new Scanner(System.in);
-        while (flag) {
+        while (true) {
             try {
-                connection = new Connection(host, port);
-                socketIO = new SocketIO(connection);
-                break;
+                return new Connection(host, port);
             } catch (IOException e) {
                 System.out.println("Сервер выключен или порт " + port + " недоступен.\n" +
                         "Укажите порт сервера.");
@@ -36,33 +33,35 @@ public class ClientMain {
                     try {
                         String inp = inputScanner.nextLine().trim();
                         if (inp.equals("exit")) {
-                            flag = false;
-                            break;
+                            return null;
                         }
                         port = Integer.parseInt(inp);
                         break;
                     } catch (NumberFormatException numberFormatException) {
                         System.out.println("Укажите корректный порт.");
                     } catch (NoSuchElementException noSuchElementException) {
-                        flag = false;
-                        break;
+                        return null;
                     }
                 }
             }
         }
-        return flag;
     }
 
     public static void main(String[] args) {
-
         Scanner inputScanner = new Scanner(System.in);
-        Connection connection = null;
         SocketIO socketIO = null;
         int port = tryToGetPort(args);
-        String host = "helios.se.ifmo.ru";
-        boolean flag = tryToConnect(connection, socketIO, host, port);
-        if (flag) {
+        String host = "localhost";
+        Connection connection = tryToConnect(host, port);
+        boolean flag = false;
+        if (connection != null) {
+            try {
+                socketIO = new SocketIO(connection);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             port = connection.getSocket().getPort();
+            flag = true;
             System.out.println("Соединение установлено.");
         }
         while (flag) {
@@ -70,7 +69,7 @@ public class ClientMain {
                 //Sends the path to save a file with collection on the server.
                 socketIO.write(null, null, args[0]);
                 ServerResponse serverResponse = socketIO.read();
-                handleResponseOnPath(serverResponse, socketIO, args);
+                flag = handleResponseOnPath(serverResponse, socketIO, args);
             } catch (IndexOutOfBoundsException e) {
                 System.out.println("Не указан путь к файлу.\n" +
                         "Укажите путь к файлу или введите exit для выхода из программы.");
@@ -85,8 +84,13 @@ public class ClientMain {
                 if (inputScanner.nextLine().trim().equals("exit")) {
                     break;
                 } else {
-                    flag = tryToConnect(connection, socketIO, host, port);
-                    if (flag) {
+                    connection = tryToConnect(host, port);
+                    if (connection!=null) {
+                        try {
+                            socketIO = new SocketIO(connection);
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
                         port = connection.getSocket().getPort();
                         System.out.println("Соединение восстановлено.");
                     }
