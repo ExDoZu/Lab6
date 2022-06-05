@@ -129,7 +129,6 @@ public class Connection {
         Organization organization = clientRequest.getOrganization();
 
         if (fullCommand[0].equals("exit")) {
-            new Save(collection).execute(null, filePath, null);
             return false;
         }
         try {
@@ -142,7 +141,6 @@ public class Connection {
                 log.info("Command '"+fullCommand[0]+"' was successfully executed");
             }
         } catch (Exception e) {
-            new Save(collection).execute(null, filePath, null);
             return false;
         }
         return true;

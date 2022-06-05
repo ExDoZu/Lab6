@@ -1,8 +1,11 @@
 package zuev.nikita.server.command;
 
+import zuev.nikita.server.net.Connection;
 import zuev.nikita.structure.Organization;
 
-import java.io.IOException;
+
+import java.nio.channels.SocketChannel;
+
 import java.util.HashMap;
 import java.util.Hashtable;
 
@@ -13,7 +16,7 @@ public abstract class Command {
     /**
      * Collection processed by a command
      */
-    protected final Hashtable<String, Organization> collection;
+    protected Hashtable<String, Organization> collection;
     protected final HashMap<String, Command> commandList;
 
     public Command() {
@@ -36,6 +39,10 @@ public abstract class Command {
      * @return result/report of command execution
      */
     public abstract String execute(String arg, String savePath, Organization organization);
+
+    public String serverExecute(String arg, HashMap<SocketChannel, Connection> connections) {
+        return null;
+    }
 
     /**
      * @return Information about the command.
