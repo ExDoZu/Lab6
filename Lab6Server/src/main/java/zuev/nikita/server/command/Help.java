@@ -1,8 +1,10 @@
 package zuev.nikita.server.command;
 
 
+import zuev.nikita.server.net.Connection;
 import zuev.nikita.structure.Organization;
 
+import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 
 /**
@@ -24,5 +26,10 @@ public class Help extends Command {
     @Override
     public String getHelp() {
         return "help : вывести справку по доступным командам";
+    }
+
+    @Override
+    public String serverExecute(String arg, HashMap<SocketChannel, Connection> connections) {
+        return execute(null, null, null);
     }
 }
