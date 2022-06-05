@@ -74,7 +74,11 @@ public class ClientMain {
                 System.out.println("Не указан путь к файлу.\n" +
                         "Укажите путь к файлу или введите exit для выхода из программы.");
                 args = new String[1];
-                args[0] = inputScanner.nextLine().trim();
+                try {
+                    args[0] = inputScanner.nextLine().trim();
+                } catch (NoSuchElementException elementException) {
+                    break;
+                }
                 if (args[0].equals("exit")) break;
             } catch (NoSuchElementException e) {
                 break;
@@ -85,7 +89,7 @@ public class ClientMain {
                     break;
                 } else {
                     connection = tryToConnect(host, port);
-                    if (connection!=null) {
+                    if (connection != null) {
                         try {
                             socketIO = new SocketIO(connection);
                         } catch (IOException ex) {
