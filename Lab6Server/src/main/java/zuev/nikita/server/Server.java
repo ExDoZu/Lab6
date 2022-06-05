@@ -187,6 +187,9 @@ public class Server {
                 String input = scanner.nextLine().trim();
                 String response = serversCommandsInvoker.invoke(input.split("\\s+", 2),connections);
                 if (response.equals("exit")) serverIsOn = false;
+                else{
+                    System.out.println(response);
+                }
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
