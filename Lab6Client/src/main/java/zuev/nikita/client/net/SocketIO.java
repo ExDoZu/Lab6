@@ -6,9 +6,12 @@ import zuev.nikita.structure.Organization;
 
 import java.io.*;
 
+/**
+ * Instrument to send and get serialized objects using socket
+ */
 public class SocketIO {
 
-    Connection connection;
+    private final Connection connection;
 
 
     public SocketIO(Connection connection) throws IOException {
@@ -29,7 +32,7 @@ public class SocketIO {
 
     public ServerResponse read() throws IOException, ClassNotFoundException {
         byte[] arr = new byte[16384];
-        //Magic bytes for ObjectInputStream
+        //Magic bytes for ObjectInputStream. They are unnecessary to initialize ObjectInputStream
         arr[0] = -84;
         arr[1] = -19;
         arr[2] = 0;
