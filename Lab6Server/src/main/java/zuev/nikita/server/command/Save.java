@@ -3,23 +3,21 @@ package zuev.nikita.server.command;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import zuev.nikita.server.JsonDataHandler;
+import zuev.nikita.server.net.Connection;
 import zuev.nikita.structure.Organization;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Hashtable;
+import java.nio.channels.SocketChannel;
+import java.util.HashMap;
+
 
 /**
  * Saves the collection to the file.
  */
 public class Save extends Command {
     private final static Logger log = LoggerFactory.getLogger(Save.class);
-
-    public Save(Hashtable<String, Organization> collection) {
-        super(collection);
-    }
 
     @Override
     public String execute(String arg, String savePath, Organization organization) {
@@ -28,11 +26,11 @@ public class Save extends Command {
         try {
             if (!file.exists()) {
                 log.error("Collection is not saved. File '" + savePath + "'is not found");
-                return "nofile";
+                return "One of files is not found to save a collection.";
             }
             if (!file.canWrite()) {
                 log.error("Collection is not saved. No access to file '" + savePath + "'");
-                return "noaccess";
+                return "One of files is not accessible to save a collection.";
             }
             FileWriter fileWriter = new FileWriter(file);
             fileWriter.write(JsonDataHandler.hashtableToString(collection));
@@ -40,13 +38,25 @@ public class Save extends Command {
             log.info("Collection is successfully saved");
         } catch (IOException e) {
             log.error("Collection is not saved. File '" + savePath + "'is not found or no access to it");
-            return "fail";
+            return "One of files is not saved.";
         }
         return "ok";
     }
 
     @Override
+    public String serverExecute(String arg, HashMap<SocketChannel, Connection> connections) {
+        for (SocketChannel key : connections.keySet()) {
+            collection = connections.get(key).getCollection();
+            String response = execute(null, connections.get(key).getFilePath(), null);
+            if (!response.equals("ok")) {
+                return response;
+            }
+        }
+        return "All collections are successfully saved.";
+    }
+
+    @Override
     public String getHelp() {
-        return "save : сохранить коллекцию в файл";
+        return "save : save collection to the file";
     }
 }
