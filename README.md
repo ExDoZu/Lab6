@@ -1,6 +1,6 @@
 # Laboratory work №6
 
-### Input the following commands to build and run the project:
+### Enter the following commands to build and run the project:
 
 ```shell
 mvn package
@@ -13,7 +13,7 @@ java -jar .\executable\client6.jar <filePath> <port>
 
 ###### \<filePath> - you need to specify the path to the data file. \<port> is an optional argument, 52300 - default
 
-### An example of a valid data file:
+### Example of a valid data file:
 
 `data.json`
 ```json
